@@ -1,10 +1,14 @@
 {
   "name": "bioswap-sdk",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "This sdk allows easy swap with bio-swap",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/codinglife108/bioswap-sdk"
   },
   "keywords": [
     "swap"
