@@ -21,7 +21,7 @@ const {
 const IDL = require("./bio_swap.json");
 
 const programId = new PublicKey("CxwNsCSB97vRfumidQkERe6UEBAxbconoDXdET5WGBiA");
-const connection = new Connection("AQgTw7JT8yAz1YYp8rcwYdJugeCm2RZGfsuK79RPmtSf");
+const connection = new Connection("https://api.mainnet-beta.solana.com");
 const slippage = 3;
 
 const getMintPubKey = (sourceForUser, destinationForUser) => {
