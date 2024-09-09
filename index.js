@@ -18,7 +18,7 @@ const {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } = require("@solana/spl-token");
-const IDL = require("./lib/bio_swap.json");
+const IDL = require("./bio_swap.json");
 
 const programId = new PublicKey(process.env.PROGRAMID);
 const connection = new Connection(process.env.NETWORKURL);
