@@ -20,8 +20,8 @@ const {
 } = require("@solana/spl-token");
 const IDL = require("./bio_swap.json");
 
-const programId = new PublicKey(process.env.PROGRAMID);
-const connection = new Connection(process.env.NETWORKURL);
+const programId = new PublicKey("CxwNsCSB97vRfumidQkERe6UEBAxbconoDXdET5WGBiA");
+const connection = new Connection("AQgTw7JT8yAz1YYp8rcwYdJugeCm2RZGfsuK79RPmtSf");
 const slippage = 3;
 
 const getMintPubKey = (sourceForUser, destinationForUser) => {
