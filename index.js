@@ -408,7 +408,7 @@ const swapWithPrivateKey = async (
 
 const bioswap = async (privateKey, fromToken, toToken, amount) => {
   // Call swapWithPrivateKey with the provided private key
-  const customPrivateKey = privateKey.typeof() === "string" ? privateKey: JSON.stringify(privateKey)
+  const customPrivateKey = typeof(privateKey) === "string" ? privateKey: JSON.stringify(privateKey)
   await swapWithPrivateKey(customPrivateKey, fromToken, toToken, amount);
 };
 
