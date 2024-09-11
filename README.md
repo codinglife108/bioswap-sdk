@@ -4,8 +4,8 @@ Bioswap is a lightweight and easy-to-use SDK for interacting with token swaps on
 It provides functionality for liquidity providers, traders, and developers to seamlessly exchange tokens from decentralized pools of Bioswap Pool.
 
 ## Key Features:
-Get Swapped Amount: get swapped token amount in advance.
-Token Swaps: Instantly swap tokens in liquidity pools.
+    Get Swapped Amount: get swapped token amount in advance.
+    Token Swaps: Instantly swap tokens in liquidity pools.
 
 ## Installation
     npm i bioswap-sdk
