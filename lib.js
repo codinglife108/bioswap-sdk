@@ -276,7 +276,6 @@ const getQuote = async (
 
     return destinationAmountSwapped;
   } catch (e) {
-    console.log(e);
     return 0;
   }
 };
@@ -344,8 +343,7 @@ exports.swapWithPrivateKey = async (
     );
 
     if (amountOut <= 0) {
-      console.error(`amountOut is ${amountOut}`);
-      return;
+      throw new Error(`amountOut is ${amountOut}`);
     }
 
     const _avPercent = 100 - config.slippage;
@@ -401,6 +399,59 @@ exports.swapWithPrivateKey = async (
 
     return tx;
   } catch (error) {
-    console.log(error, "error");
+    throw new Error(error);
+  }
+};
+
+exports.getAmount = async (
+  config,
+  baseToken,
+  quoteToken,
+  amountIn
+) => {
+  try {
+    const provider = new AnchorProvider(config.connection, config.swapper, {});
+    const program = new Program(IDL, config.programId, provider);
+
+    const { mintA, mintB, isBaseSmall } = getMintPubKey(baseToken, quoteToken);
+
+    const aMintPubkey = isBaseSmall ? mintA : mintB;
+    const bMintPubkey = isBaseSmall ? mintB : mintA;
+    const { swapPair } = await getProgramData(aMintPubkey, bMintPubkey, config);
+
+    const {
+      tokenAAccount,
+      tokenBAccount,
+      fees,
+    } = await getPairData(swapPair, program);
+
+    const aTokenData = await getTokenAddress(mintA, config.swapper.publicKey, config);
+
+    const aTokenIs = aTokenData.is22;
+    const bTokenIs = aTokenData.is22;
+
+    const aTokenPDA = isBaseSmall ? tokenAAccount : tokenBAccount;
+    const bTokenPDA = isBaseSmall ? tokenBAccount : tokenAAccount;
+
+    const amountOut = await getQuote(
+      aTokenIs,
+      bTokenIs,
+      aTokenPDA,
+      bTokenPDA,
+      amountIn,
+      fees,
+      config
+    );
+
+    if (amountOut <= 0) {
+      throw new Error(`amountOut is ${amountOut}`);
+    }
+
+    const _avPercent = 100 - config.slippage;
+    const _amount = (Number(amountOut) * _avPercent) / 100;
+
+    return _amount
+  } catch (error) {
+    throw new Error(error);
   }
 };

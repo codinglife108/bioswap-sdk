@@ -1,5 +1,5 @@
 const { PublicKey, Connection, Keypair } = require("@solana/web3.js");
-const { swapWithPrivateKey } = require("./lib");
+const { swapWithPrivateKey, getAmount } = require("./lib");
 const { Wallet } = require("@coral-xyz/anchor");
 const bs58 = require('bs58');
 
@@ -12,9 +12,12 @@ class BioSwap {
     swapper: null
   }
 
-  constructor (url, wallet) {
+  constructor (url, wallet, slippage) {
     if (url) {
       this.config.connection = new Connection(url);
+    }
+    if (slippage) {
+      this.config.slippage = slippage;
     }
 
     if (typeof(wallet) === "string") {
@@ -48,6 +51,20 @@ class BioSwap {
         amount
       );
       return tx;
+    } else {
+      throw new Error("No wallet provided");
+    }
+  };
+
+  getSwappedAmount = async (fromToken, toToken, amount) => {
+    if (this.config.swapper) {
+      const amountOut = await getAmount(
+        this.config,
+        fromToken,
+        toToken,
+        amount
+      );
+      return amountOut;
     } else {
       throw new Error("No wallet provided");
     }
