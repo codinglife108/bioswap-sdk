@@ -1,7 +1,8 @@
 {
   "name": "bioswap-sdk",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "This sdk allows easy swap with bio-swap",
+  "homepage": "https://swap.biokript.com/swap",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -16,7 +17,7 @@
     "url": "git://github.com/Biokript/sol-swap-sdk"
   },
   "keywords": [
-    "swap"
+    "swap", "solana", "bioswap", "bioswap-sdk"
   ],
   "author": "codinglife108",
   "license": "ISC"

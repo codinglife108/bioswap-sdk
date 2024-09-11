@@ -1,5 +1,15 @@
 # Bioswap SDK
 
+Bioswap is a lightweight and easy-to-use SDK for interacting with token swaps on the Solana blockchain. 
+It provides functionality for liquidity providers, traders, and developers to seamlessly exchange tokens from decentralized pools of Bioswap Pool.
+
+## Key Features:
+Get Swapped Amount: get swapped token amount in advance.
+Token Swaps: Instantly swap tokens in liquidity pools.
+
+## Installation
+    npm i bioswap-sdk
+
 ## Tech Stacks
 
     Node.js latest version
@@ -12,12 +22,6 @@
     @solana/wallet-adapter-react-ui: "^0.9.35",
 
 ## How it works
-
-### call bioswap function with these parameters
-    privateKey
-    fromToken
-    toToken
-    amount
 
 ### example method to use swap function in Node.js with PrivateKey
     const Bioswap = require('bioswap-sdk')
