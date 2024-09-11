@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/codinglife108/bioswap-sdk"
+    "url": "git://github.com/Biokript/sol-swap-sdk"
   },
   "keywords": [
     "swap"
