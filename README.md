@@ -2,14 +2,14 @@
 
 ## Tech Stacks
 
-Node.js latest version
+    Node.js latest version
 
-@coral-xyz/anchor: "^0.29.0",
-@solana/web3.js: "^1.95.2",
-@solana/spl-token: "^0.4.8"
+    @coral-xyz/anchor: "^0.29.0",
+    @solana/web3.js: "^1.95.2",
+    @solana/spl-token: "^0.4.8"
 
-@solana/wallet-adapter-react: "^0.15.35",
-@solana/wallet-adapter-react-ui: "^0.9.35",
+    @solana/wallet-adapter-react: "^0.15.35",
+    @solana/wallet-adapter-react-ui: "^0.9.35",
 
 ## How it works
 

@@ -1,6 +1,7 @@
 const { PublicKey, Connection, Keypair } = require("@solana/web3.js");
 const { swapWithPrivateKey } = require("./lib");
 const { Wallet } = require("@coral-xyz/anchor");
+const bs58 = require('bs58');
 
 class BioSwap {
 
@@ -17,7 +18,12 @@ class BioSwap {
     }
 
     if (typeof(wallet) === "string") {
-      const adminKey = eval(wallet);
+      let adminKey
+      if (wallet.includes("[")) {
+        adminKey = eval(wallet);
+      } else {
+        adminKey = bs58.decode(wallet);
+      }
       const keypair = Keypair.fromSecretKey(Uint8Array.from(adminKey));  
       this.config.swapper = new Wallet(keypair);
     } else if (typeof(wallet) === "object") {
