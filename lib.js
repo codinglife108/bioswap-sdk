@@ -336,17 +336,17 @@ const getLpUsers = async (mint, poolTokenAccount) => {
 }
 
 const checkCompute = async () => {
-    const instructions = [];
+    const instructions = []
     const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({
-      microLamports: 1000,
-    });
+        microLamports: 10000
+    })
     const computeLimitIx = ComputeBudgetProgram.setComputeUnitLimit({
-      units: 100000_000,
-    });
-    instructions.push(computePriceIx);
-    instructions.push(computeLimitIx);
-    return instructions;
-  };
+        units: 100000_000
+    })
+    instructions.push(computePriceIx)
+    instructions.push(computeLimitIx)
+    return instructions
+}
 
 exports.swapWithPrivateKey = async (
     config,
@@ -362,20 +362,20 @@ exports.swapWithPrivateKey = async (
                 {}
             )
             const program = new Program(IDL, config.programId, provider)
-    
+
             const { mintA, mintB, isBaseSmall } = getMintPubKey(
                 baseToken,
                 quoteToken
             )
             const aMintPubkey = isBaseSmall ? mintA : mintB
             const bMintPubkey = isBaseSmall ? mintB : mintA
-    
+
             const { pda, swapPair } = await getProgramData(
                 aMintPubkey,
                 bMintPubkey,
                 config
             )
-    
+
             const [
                 {
                     tokenAAccount,
@@ -394,18 +394,18 @@ exports.swapWithPrivateKey = async (
                 getTokenAddress(mintB, config),
                 checkBaseNativeForUser(mintA, config, amountIn)
             ])
-    
+
             const aTokenUser = aTokenData.tokenAccount
             const aTokenSource = aTokenData.tokenSource
             const aTokenIs = aTokenData.is22
-    
+
             const bTokenUser = bTokenData.tokenAccount
             const bTokenSource = aTokenData.tokenSource
             const bTokenIs = aTokenData.is22
-    
+
             const aTokenPDA = isBaseSmall ? tokenAAccount : tokenBAccount
             const bTokenPDA = isBaseSmall ? tokenBAccount : tokenAAccount
-    
+
             const [addInstruction2, amountOut, lpTokenUsers, hash] =
                 await Promise.all([
                     checkQuoteForUser(mintB, config, bTokenUser),
@@ -421,19 +421,19 @@ exports.swapWithPrivateKey = async (
                     getLpUsers(poolMintPubkey, String(poolTokenAccount)),
                     config.connection.getLatestBlockhash()
                 ])
-    
+
             if (amountOut <= 0) {
                 throw new Error(`amountOut is ${amountOut}`)
             }
-    
+
             const _avPercent = 100 - config.slippage
             const _amount = (Number(amountOut) * _avPercent) / 100
-    
+
             const [sendAmount, receiveAmount] = await Promise.all([
                 changeToBN(amountIn, aMintPubkey, config),
                 changeToBN(_amount, bMintPubkey, config)
             ])
-    
+
             const addInstruction3 = await program.methods
                 .swapExactIn(sendAmount, receiveAmount)
                 .accounts({
@@ -455,13 +455,13 @@ exports.swapWithPrivateKey = async (
                 })
                 .remainingAccounts(lpTokenUsers)
                 .instruction()
-    
+
             const addInstruction4 = await checkQuoteNativeForUser(
                 mintB,
                 config.swapper.publicKey
             )
-            const instruction5 = await checkCompute();
-    
+            const instruction5 = await checkCompute()
+
             const instructions = [
                 ...addInstruction1,
                 ...addInstruction2,
@@ -474,9 +474,9 @@ exports.swapWithPrivateKey = async (
                 recentBlockhash: hash.blockhash,
                 instructions
             }).compileToV0Message()
-    
+
             const transaction = new VersionedTransaction(message)
-    
+
             const signedTxn = await config.swapper.signTransaction(transaction)
             const tx = await config.connection.sendTransaction(signedTxn, {
                 skipPreflight: true
@@ -485,13 +485,14 @@ exports.swapWithPrivateKey = async (
             let time = 0
 
             console.log(tx)
-     
-            const interval = setInterval(async() => {
+
+            const interval = setInterval(async () => {
                 // console.log(time, ' asking')
-                const transactionResult = await config.connection.getTransaction(tx, {
-                    commitment: 'confirmed',
-                    maxSupportedTransactionVersion: 1
-                })
+                const transactionResult =
+                    await config.connection.getTransaction(tx, {
+                        commitment: 'confirmed',
+                        maxSupportedTransactionVersion: 1
+                    })
                 if (transactionResult) {
                     console.log('done', time)
                     resolve(tx)
@@ -503,11 +504,11 @@ exports.swapWithPrivateKey = async (
                         resolve(false)
                     } else {
                         // console.log('add one')
-                        time ++                        
+                        time++
                     }
                 }
             }, 3000)
-    
+
             return tx
         } catch (error) {
             throw new Error(error)
