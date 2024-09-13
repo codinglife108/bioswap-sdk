@@ -338,7 +338,7 @@ const getLpUsers = async (mint, poolTokenAccount) => {
 const checkCompute = async () => {
     const instructions = []
     const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: 10000
+        microLamports: 50000
     })
     const computeLimitIx = ComputeBudgetProgram.setComputeUnitLimit({
         units: 100000_000
