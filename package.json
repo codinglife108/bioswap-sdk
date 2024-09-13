@@ -1,6 +1,6 @@
 {
   "name": "bioswap-sdk",
-  "version": "1.1.9",
+  "version": "1.2.2",
   "description": "This sdk allows easy swap with bio-swap",
   "homepage": "https://swap.biokript.com/swap",
   "main": "index.js",

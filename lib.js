@@ -94,42 +94,83 @@ const checkBaseNativeForUser = async (mint, config, amount) => {
     const instructions = []
 
     if (mint.toBase58() === NATIVE_MINT.toBase58()) {
-        const tokenSourceForSwapper = getAssociatedTokenAddressSync(
-            NATIVE_MINT,
-            config.swapper.publicKey
-        )
-
         try {
-            const account = await getAccount(
-                config.connection,
+            const tokenSourceForSwapper = getAssociatedTokenAddressSync(
+                NATIVE_MINT,
+                config.swapper.publicKey,
+                true
+            )
+
+            const accountInfo = await config.connection.getAccountInfo(
                 tokenSourceForSwapper
             )
-            if (Number(account.amount) < Number(amount) * 10 ** 9) {
+
+            if (!accountInfo) {
+                const createWsolAccountIxn =
+                    createAssociatedTokenAccountInstruction(
+                        config.swapper.publicKey,
+                        tokenSourceForSwapper,
+                        config.swapper.publicKey,
+                        NATIVE_MINT
+                    )
+                instructions.push(createWsolAccountIxn)
                 const solTransIxn = SystemProgram.transfer({
                     fromPubkey: config.swapper.publicKey,
                     toPubkey: tokenSourceForSwapper,
-                    lamports: Number(amount) * 10 ** 9 - Number(account.amount)
+                    lamports: new BN(String(Number(amount) * 10 ** 9))
                 })
                 instructions.push(solTransIxn)
+            } else {
+                if (Number(account.amount) < Number(amount) * 10 ** 9) {
+                    const solTransIxn = SystemProgram.transfer({
+                        fromPubkey: config.swapper.publicKey,
+                        toPubkey: tokenSourceForSwapper,
+                        lamports:
+                            Number(amount) * 10 ** 9 - Number(account.amount)
+                    })
+                    instructions.push(solTransIxn)
+                }
             }
-        } catch (err) {
-            const createWsolAccountIxn =
-                createAssociatedTokenAccountInstruction(
-                    config.swapper.publicKey,
-                    tokenSourceForSwapper,
-                    config.swapper.publicKey,
-                    NATIVE_MINT
-                )
-            instructions.push(createWsolAccountIxn)
-            const solTransIxn = SystemProgram.transfer({
-                fromPubkey: config.swapper.publicKey,
-                toPubkey: tokenSourceForSwapper,
-                lamports: new BN(String(Number(amount) * 10 ** 9))
-            })
-            instructions.push(solTransIxn)
+            const syncNativeInx = createSyncNativeInstruction(
+                tokenSourceForSwapper
+            )
+            instructions.push(syncNativeInx)
+        } catch (error) {
+            throw new Error("RPC Error when create wsol sync");
+            
         }
-        const syncNativeInx = createSyncNativeInstruction(tokenSourceForSwapper)
-        instructions.push(syncNativeInx)
+
+        // try {
+        //     const account = await getAccount(
+        //         config.connection,
+        //         tokenSourceForSwapper
+        //     )
+        //     if (Number(account.amount) < Number(amount) * 10 ** 9) {
+        //         const solTransIxn = SystemProgram.transfer({
+        //             fromPubkey: config.swapper.publicKey,
+        //             toPubkey: tokenSourceForSwapper,
+        //             lamports: Number(amount) * 10 ** 9 - Number(account.amount)
+        //         })
+        //         instructions.push(solTransIxn)
+        //     }
+        // } catch (err) {
+        //     const createWsolAccountIxn =
+        //         createAssociatedTokenAccountInstruction(
+        //             config.swapper.publicKey,
+        //             tokenSourceForSwapper,
+        //             config.swapper.publicKey,
+        //             NATIVE_MINT
+        //         )
+        //     instructions.push(createWsolAccountIxn)
+        //     const solTransIxn = SystemProgram.transfer({
+        //         fromPubkey: config.swapper.publicKey,
+        //         toPubkey: tokenSourceForSwapper,
+        //         lamports: new BN(String(Number(amount) * 10 ** 9))
+        //     })
+        //     instructions.push(solTransIxn)
+        // }
+        // const syncNativeInx = createSyncNativeInstruction(tokenSourceForSwapper)
+        // instructions.push(syncNativeInx)
     }
     return instructions
 }
@@ -148,37 +189,68 @@ const checkQuoteForUser = async (mint, config, tokenSourceForSwapper) => {
     const sourceIs22 = await checkIsToken2022(mint, config)
 
     try {
-        if (sourceIs22) {
-            await getAccount(
-                config.connection,
-                tokenSourceForSwapper,
-                null,
-                TOKEN_2022_PROGRAM_ID
-            )
-        } else {
-            await getAccount(config.connection, tokenSourceForSwapper)
+        const accountInfo = await config.connection.getAccountInfo(
+            tokenSourceForSwapper
+        )
+        if (!accountInfo) {
+            let createAccountInstruction
+            if (sourceIs22) {
+                createAccountInstruction =
+                    createAssociatedTokenAccountInstruction(
+                        config.swapper.publicKey,
+                        tokenSourceForSwapper,
+                        config.swapper.publicKey,
+                        mint,
+                        TOKEN_2022_PROGRAM_ID
+                    )
+            } else {
+                createAccountInstruction =
+                    createAssociatedTokenAccountInstruction(
+                        config.swapper.publicKey,
+                        tokenSourceForSwapper,
+                        config.swapper.publicKey,
+                        mint
+                    )
+            }
+            instructions.push(createAccountInstruction)
         }
-    } catch {
-        let createAccountInstruction
-        if (sourceIs22) {
-            createAccountInstruction = createAssociatedTokenAccountInstruction(
-                config.swapper.publicKey,
-                tokenSourceForSwapper,
-                config.swapper.publicKey,
-                mint,
-                TOKEN_2022_PROGRAM_ID
-            )
-        } else {
-            createAccountInstruction = createAssociatedTokenAccountInstruction(
-                config.swapper.publicKey,
-                tokenSourceForSwapper,
-                config.swapper.publicKey,
-                mint
-            )
-        }
-        instructions.push(createAccountInstruction)
+        return instructions
+    } catch (error) {
+        throw new Error('RPC Error when create token account')
     }
-    return instructions
+
+    // try {
+    //     if (sourceIs22) {
+    //         await getAccount(
+    //             config.connection,
+    //             tokenSourceForSwapper,
+    //             null,
+    //             TOKEN_2022_PROGRAM_ID
+    //         )
+    //     } else {
+    //         await getAccount(config.connection, tokenSourceForSwapper)
+    //     }
+    // } catch {
+    //     let createAccountInstruction
+    //     if (sourceIs22) {
+    //         createAccountInstruction = createAssociatedTokenAccountInstruction(
+    //             config.swapper.publicKey,
+    //             tokenSourceForSwapper,
+    //             config.swapper.publicKey,
+    //             mint,
+    //             TOKEN_2022_PROGRAM_ID
+    //         )
+    //     } else {
+    //         createAccountInstruction = createAssociatedTokenAccountInstruction(
+    //             config.swapper.publicKey,
+    //             tokenSourceForSwapper,
+    //             config.swapper.publicKey,
+    //             mint
+    //         )
+    //     }
+    //     instructions.push(createAccountInstruction)
+    //     return instructions
+    // }
 }
 
 const checkQuoteNativeForUser = async (mint, pubkey) => {
@@ -338,7 +410,7 @@ const getLpUsers = async (mint, poolTokenAccount) => {
 const checkCompute = async () => {
     const instructions = []
     const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: 50000
+        microLamports: 5000
     })
     const computeLimitIx = ComputeBudgetProgram.setComputeUnitLimit({
         units: 100000_000
