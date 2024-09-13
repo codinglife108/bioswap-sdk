@@ -3,6 +3,7 @@ const {
   SystemProgram,
   TransactionMessage,
   VersionedTransaction,
+  ComputeBudgetProgram,
 } = require("@solana/web3.js");
 
 const { AnchorProvider, BN, Program } = require("@coral-xyz/anchor");
@@ -280,6 +281,19 @@ const getQuote = async (
   }
 };
 
+const checkCompute = async () => {
+  const instructions = [];
+  const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({
+    microLamports: 1000,
+  });
+  const computeLimitIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 100000_000,
+  });
+  instructions.push(computePriceIx);
+  instructions.push(computeLimitIx);
+  return instructions;
+};
+
 exports.swapWithPrivateKey = async (
   config,
   baseToken,
@@ -378,11 +392,14 @@ exports.swapWithPrivateKey = async (
       config.swapper.publicKey
     );
 
+    const instruction5 = await checkCompute();
+
     const instructions = [
       ...addInstruction1,
       ...addInstruction2,
       addInstruction3,
       ...addInstruction4,
+      ...instruction5
     ];
     const { blockhash } = await config.connection.getLatestBlockhash();
     const message = new TransactionMessage({
