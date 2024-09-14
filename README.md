@@ -23,75 +23,56 @@ It provides functionality for liquidity providers, traders, and developers to se
 
 ## How it works
 
-### example method to use swap function in Node.js with PrivateKey
+### example method to use swap function
     const Bioswap = require('bioswap-sdk')
 
-    const privateKey = []
+    const signer = // From PrivateKey or Phantom
+
     const fromToken = "So11111111111111111111111111111111111111112";
     const toToken = "BLLbAtSHFpgkSaUGmSQnjafnhebt8XPncaeYrpEgWoVk";
     const amount = 1;
     const rpcUrl = ""
     const slippage = 3
 
-    const bioswap = new Bioswap(rpcUrl, privateKey, slippage)
+    const bioswap = new Bioswap(rpcUrl, slippage, signer.publicKey)
     <!-- If you don't pass rpcUrl it will be default mainnet RPC url -->
     <!-- If you don't pass slippage, it will be 3% automatically -->
 
     const init = async () => {
-        const result = await bioswap.swap(fromToken, toToken, amount)
-        console.log(result)
+        const message = await bioswap.swap(fromToken, toToken, amount);
+        const transaction = new VersionedTransaction(message);
+        const signedTxn = await signer.signTransaction(transaction);
+        const tx = await connection.sendTransaction(signedTxn, {
+          skipPreflight: true,
+        });
+      
+        console.log(tx);        
     }
     init()
-
-### example method to use swap function in Web3 Frontend with Wallet connection
-
-    import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-    import { useAnchorWallet } from "@solana/wallet-adapter-react";
-    import Bioswap from 'bioswap-sdk'
-
-    export default function Home() {
-
-        const wallet = useAnchorWallet();
-
-        const sendSol = async () => {
-            const fromToken = "So11111111111111111111111111111111111111112";
-            const toToken = "BLLbAtSHFpgkSaUGmSQnjafnhebt8XPncaeYrpEgWoVk";
-            const amount = 1;
-            const rpcUrl = ""
-            const slippage = 3;
-
-            const bioswap = new Bioswap(rpcUrl, wallet, slippage)
-            <!-- If you don't pass rpcUrl it will be default mainnet RPC url -->
-            <!-- If you don't pass slippage, it will be 3% automatically -->
-
-            const result = await bioswap.swap(fromToken, toToken, amount)
-            console.log(result)
-        };
-
-        return (
-            <div>
-                <WalletMultiButton />
-                <button onClick={() => sendSol()}>Send</button>
-            </div>
-        );
-    }
 
 ### example method to use getSwappedAmount function in Node.js with PrivateKey
     const Bioswap = require('bioswap-sdk')
 
-    const privateKey = []
+    const signer = // From PrivateKey or Phantom
+
     const fromToken = "So11111111111111111111111111111111111111112";
     const toToken = "BLLbAtSHFpgkSaUGmSQnjafnhebt8XPncaeYrpEgWoVk";
     const amount = 1;
     const rpcUrl = ""
     const slippage = 3
 
-    const bioswap = new Bioswap(rpcUrl, privateKey, slippage)
+    const bioswap = new Bioswap(rpcUrl, slippage, signer.publicKey)
     <!-- If you don't pass rpcUrl it will be default mainnet RPC url -->
     <!-- If you don't pass slippage, it will be 3% automatically -->
 
     const init = async () => {
-        const result = await bioswap.getSwappedAmount(fromToken, toToken, amount)
-        console.log(result)
+        const message = await bioswap.getSwappedAmount(fromToken, toToken, amount);
+        const transaction = new VersionedTransaction(message);
+        const signedTxn = await signer.signTransaction(transaction);
+        const tx = await connection.sendTransaction(signedTxn, {
+          skipPreflight: true,
+        });
+      
+        console.log(tx);        
     }
     init()

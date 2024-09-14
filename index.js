@@ -1,73 +1,48 @@
-const { PublicKey, Connection, Keypair } = require("@solana/web3.js");
+const { PublicKey, Connection } = require("@solana/web3.js");
 const { swapWithPrivateKey, getAmount } = require("./lib");
-const { Wallet } = require("@coral-xyz/anchor");
-const bs58 = require('bs58');
 
 class BioSwap {
 
   config = {
     programId: new PublicKey("CxwNsCSB97vRfumidQkERe6UEBAxbconoDXdET5WGBiA"),
     connection: new Connection("https://api.mainnet-beta.solana.com"),
+    RANDOM_WALLET_ADDRESS: 'FUg6vdQyauSKCWffzyj8H1k8snSao4TC3oKqUFoRDZQE',
+    pubkey: '',
     slippage: 3,
-    swapper: null
   }
 
-  constructor (url, wallet, slippage) {
+  constructor (url, slippage, pubkey) {
     if (url) {
       this.config.connection = new Connection(url);
     }
     if (slippage) {
       this.config.slippage = slippage;
     }
-
-    if (typeof(wallet) === "string") {
-      let adminKey
-      if (wallet.includes("[")) {
-        adminKey = eval(wallet);
-      } else {
-        adminKey = bs58.decode(wallet);
-      }
-      const keypair = Keypair.fromSecretKey(Uint8Array.from(adminKey));  
-      this.config.swapper = new Wallet(keypair);
-    } else if (typeof(wallet) === "object") {
-      if(wallet.publicKey) {
-        this.config.swapper = wallet
-      } else {
-        const adminKey = eval(JSON.stringify(wallet));
-        const keypair = Keypair.fromSecretKey(Uint8Array.from(adminKey));  
-        this.config.swapper = new Wallet(keypair);
-      }
+    if (pubkey) {
+      this.config.pubkey = pubkey
     } else {
-      console.error("Wrong Signer")
+      throw new Error("No public key provided");
     }
   }
 
   swap = async (fromToken, toToken, amount) => {
-    if (this.config.swapper) {
-      const tx = await swapWithPrivateKey(
-        this.config,
-        fromToken,
-        toToken,
-        amount
-      );
-      return tx;
-    } else {
-      throw new Error("No wallet provided");
-    }
+    const tx = await swapWithPrivateKey(
+      this.config,
+      fromToken,
+      toToken,
+      amount
+    );
+    return tx;
   };
 
   getSwappedAmount = async (fromToken, toToken, amount) => {
-    if (this.config.swapper) {
-      const amountOut = await getAmount(
-        this.config,
-        fromToken,
-        toToken,
-        amount
-      );
-      return amountOut;
-    } else {
-      throw new Error("No wallet provided");
-    }
+    const amountOut = await getAmount(
+      this.config,
+      fromToken,
+      toToken,
+      amount
+    );
+    return amountOut;
   };
 
 }

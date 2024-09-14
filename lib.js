@@ -76,14 +76,14 @@ const getTokenAddress = async (mint, config) => {
     if (is22) {
         tokenAccount = getAssociatedTokenAddressSync(
             mint,
-            config.swapper.publicKey,
+            config.pubkey,
             undefined,
             TOKEN_2022_PROGRAM_ID
         )
     } else {
         tokenAccount = getAssociatedTokenAddressSync(
             mint,
-            config.swapper.publicKey
+            config.pubkey
         )
     }
     const tokenSource = is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID
@@ -97,7 +97,7 @@ const checkBaseNativeForUser = async (mint, config, amount) => {
         try {
             const tokenSourceForSwapper = getAssociatedTokenAddressSync(
                 NATIVE_MINT,
-                config.swapper.publicKey,
+                config.pubkey,
                 true
             )
 
@@ -108,69 +108,34 @@ const checkBaseNativeForUser = async (mint, config, amount) => {
             if (!accountInfo) {
                 const createWsolAccountIxn =
                     createAssociatedTokenAccountInstruction(
-                        config.swapper.publicKey,
+                        config.pubkey,
                         tokenSourceForSwapper,
-                        config.swapper.publicKey,
+                        config.pubkey,
                         NATIVE_MINT
                     )
                 instructions.push(createWsolAccountIxn)
                 const solTransIxn = SystemProgram.transfer({
-                    fromPubkey: config.swapper.publicKey,
+                    fromPubkey: config.pubkey,
                     toPubkey: tokenSourceForSwapper,
                     lamports: new BN(String(Number(amount) * 10 ** 9))
                 })
                 instructions.push(solTransIxn)
             } else {
-                if (Number(account.amount) < Number(amount) * 10 ** 9) {
-                    const solTransIxn = SystemProgram.transfer({
-                        fromPubkey: config.swapper.publicKey,
-                        toPubkey: tokenSourceForSwapper,
-                        lamports:
-                            Number(amount) * 10 ** 9 - Number(account.amount)
-                    })
-                    instructions.push(solTransIxn)
-                }
+                const solTransIxn = SystemProgram.transfer({
+                    fromPubkey: config.pubkey,
+                    toPubkey: tokenSourceForSwapper,
+                    lamports: new BN(Number(amount) * 10 ** 9)
+                })
+                instructions.push(solTransIxn)
             }
             const syncNativeInx = createSyncNativeInstruction(
                 tokenSourceForSwapper
             )
             instructions.push(syncNativeInx)
         } catch (error) {
-            throw new Error("RPC Error when create wsol sync");
-            
+            console.log(error)
+            throw new Error("RPC Error when create wsol sync");   
         }
-
-        // try {
-        //     const account = await getAccount(
-        //         config.connection,
-        //         tokenSourceForSwapper
-        //     )
-        //     if (Number(account.amount) < Number(amount) * 10 ** 9) {
-        //         const solTransIxn = SystemProgram.transfer({
-        //             fromPubkey: config.swapper.publicKey,
-        //             toPubkey: tokenSourceForSwapper,
-        //             lamports: Number(amount) * 10 ** 9 - Number(account.amount)
-        //         })
-        //         instructions.push(solTransIxn)
-        //     }
-        // } catch (err) {
-        //     const createWsolAccountIxn =
-        //         createAssociatedTokenAccountInstruction(
-        //             config.swapper.publicKey,
-        //             tokenSourceForSwapper,
-        //             config.swapper.publicKey,
-        //             NATIVE_MINT
-        //         )
-        //     instructions.push(createWsolAccountIxn)
-        //     const solTransIxn = SystemProgram.transfer({
-        //         fromPubkey: config.swapper.publicKey,
-        //         toPubkey: tokenSourceForSwapper,
-        //         lamports: new BN(String(Number(amount) * 10 ** 9))
-        //     })
-        //     instructions.push(solTransIxn)
-        // }
-        // const syncNativeInx = createSyncNativeInstruction(tokenSourceForSwapper)
-        // instructions.push(syncNativeInx)
     }
     return instructions
 }
@@ -197,18 +162,18 @@ const checkQuoteForUser = async (mint, config, tokenSourceForSwapper) => {
             if (sourceIs22) {
                 createAccountInstruction =
                     createAssociatedTokenAccountInstruction(
-                        config.swapper.publicKey,
+                        config.pubkey,
                         tokenSourceForSwapper,
-                        config.swapper.publicKey,
+                        config.pubkey,
                         mint,
                         TOKEN_2022_PROGRAM_ID
                     )
             } else {
                 createAccountInstruction =
                     createAssociatedTokenAccountInstruction(
-                        config.swapper.publicKey,
+                        config.pubkey,
                         tokenSourceForSwapper,
-                        config.swapper.publicKey,
+                        config.pubkey,
                         mint
                     )
             }
@@ -218,39 +183,6 @@ const checkQuoteForUser = async (mint, config, tokenSourceForSwapper) => {
     } catch (error) {
         throw new Error('RPC Error when create token account')
     }
-
-    // try {
-    //     if (sourceIs22) {
-    //         await getAccount(
-    //             config.connection,
-    //             tokenSourceForSwapper,
-    //             null,
-    //             TOKEN_2022_PROGRAM_ID
-    //         )
-    //     } else {
-    //         await getAccount(config.connection, tokenSourceForSwapper)
-    //     }
-    // } catch {
-    //     let createAccountInstruction
-    //     if (sourceIs22) {
-    //         createAccountInstruction = createAssociatedTokenAccountInstruction(
-    //             config.swapper.publicKey,
-    //             tokenSourceForSwapper,
-    //             config.swapper.publicKey,
-    //             mint,
-    //             TOKEN_2022_PROGRAM_ID
-    //         )
-    //     } else {
-    //         createAccountInstruction = createAssociatedTokenAccountInstruction(
-    //             config.swapper.publicKey,
-    //             tokenSourceForSwapper,
-    //             config.swapper.publicKey,
-    //             mint
-    //         )
-    //     }
-    //     instructions.push(createAccountInstruction)
-    //     return instructions
-    // }
 }
 
 const checkQuoteNativeForUser = async (mint, pubkey) => {
@@ -407,194 +339,140 @@ const getLpUsers = async (mint, poolTokenAccount) => {
     return allOwners
 }
 
-const checkCompute = async () => {
-    const instructions = []
-    const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: 5000
-    })
-    const computeLimitIx = ComputeBudgetProgram.setComputeUnitLimit({
-        units: 100000_000
-    })
-    instructions.push(computePriceIx)
-    instructions.push(computeLimitIx)
-    return instructions
-}
-
 exports.swapWithPrivateKey = async (
     config,
     baseToken,
     quoteToken,
     amountIn
 ) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const provider = new AnchorProvider(
-                config.connection,
-                config.swapper,
-                {}
-            )
-            const program = new Program(IDL, config.programId, provider)
+    try {
+        const provider = new AnchorProvider(config.connection, {
+            publicKey: new PublicKey(config.RANDOM_WALLET_ADDRESS),
+          });
+        const program = new Program(IDL, config.programId, provider)
 
-            const { mintA, mintB, isBaseSmall } = getMintPubKey(
-                baseToken,
-                quoteToken
-            )
-            const aMintPubkey = isBaseSmall ? mintA : mintB
-            const bMintPubkey = isBaseSmall ? mintB : mintA
+        const { mintA, mintB, isBaseSmall } = getMintPubKey(
+            baseToken,
+            quoteToken
+        )
+        const aMintPubkey = isBaseSmall ? mintA : mintB
+        const bMintPubkey = isBaseSmall ? mintB : mintA
 
-            const { pda, swapPair } = await getProgramData(
-                aMintPubkey,
-                bMintPubkey,
-                config
-            )
+        const { pda, swapPair } = await getProgramData(
+            aMintPubkey,
+            bMintPubkey,
+            config
+        )
 
-            const [
-                {
-                    tokenAAccount,
-                    tokenBAccount,
-                    poolMintPubkey,
-                    poolAccountForAdmin,
-                    poolTokenAccount,
-                    fees
-                },
-                aTokenData,
-                bTokenData,
-                addInstruction1
-            ] = await Promise.all([
-                getPairData(swapPair, program, config),
-                getTokenAddress(mintA, config),
-                getTokenAddress(mintB, config),
-                checkBaseNativeForUser(mintA, config, amountIn)
+        const [
+            {
+                tokenAAccount,
+                tokenBAccount,
+                poolMintPubkey,
+                poolAccountForAdmin,
+                poolTokenAccount,
+                fees
+            },
+            aTokenData,
+            bTokenData,
+            addInstruction1
+        ] = await Promise.all([
+            getPairData(swapPair, program, config),
+            getTokenAddress(mintA, config),
+            getTokenAddress(mintB, config),
+            checkBaseNativeForUser(mintA, config, amountIn)
+        ])
+
+        const aTokenUser = aTokenData.tokenAccount
+        const aTokenSource = aTokenData.tokenSource
+        const aTokenIs = aTokenData.is22
+
+        const bTokenUser = bTokenData.tokenAccount
+        const bTokenSource = aTokenData.tokenSource
+        const bTokenIs = aTokenData.is22
+
+        const aTokenPDA = isBaseSmall ? tokenAAccount : tokenBAccount
+        const bTokenPDA = isBaseSmall ? tokenBAccount : tokenAAccount
+
+        const [addInstruction2, amountOut, lpTokenUsers, hash] =
+            await Promise.all([
+                checkQuoteForUser(mintB, config, bTokenUser),
+                getQuote(
+                    aTokenIs,
+                    bTokenIs,
+                    aTokenPDA,
+                    bTokenPDA,
+                    amountIn,
+                    fees,
+                    config
+                ),
+                getLpUsers(poolMintPubkey, String(poolTokenAccount)),
+                config.connection.getLatestBlockhash()
             ])
 
-            const aTokenUser = aTokenData.tokenAccount
-            const aTokenSource = aTokenData.tokenSource
-            const aTokenIs = aTokenData.is22
-
-            const bTokenUser = bTokenData.tokenAccount
-            const bTokenSource = aTokenData.tokenSource
-            const bTokenIs = aTokenData.is22
-
-            const aTokenPDA = isBaseSmall ? tokenAAccount : tokenBAccount
-            const bTokenPDA = isBaseSmall ? tokenBAccount : tokenAAccount
-
-            const [addInstruction2, amountOut, lpTokenUsers, hash] =
-                await Promise.all([
-                    checkQuoteForUser(mintB, config, bTokenUser),
-                    getQuote(
-                        aTokenIs,
-                        bTokenIs,
-                        aTokenPDA,
-                        bTokenPDA,
-                        amountIn,
-                        fees,
-                        config
-                    ),
-                    getLpUsers(poolMintPubkey, String(poolTokenAccount)),
-                    config.connection.getLatestBlockhash()
-                ])
-
-            if (amountOut <= 0) {
-                throw new Error(`amountOut is ${amountOut}`)
-            }
-
-            const _avPercent = 100 - config.slippage
-            const _amount = (Number(amountOut) * _avPercent) / 100
-
-            const [sendAmount, receiveAmount] = await Promise.all([
-                changeToBN(amountIn, aMintPubkey, config),
-                changeToBN(_amount, bMintPubkey, config)
-            ])
-
-            const addInstruction3 = await program.methods
-                .swapExactIn(sendAmount, receiveAmount)
-                .accounts({
-                    swapper: config.swapper.publicKey,
-                    pair: swapPair,
-                    tokenSource: mintA,
-                    tokenDestination: mintB,
-                    tokenSourceForPda: aTokenPDA,
-                    tokenDestinationForPda: bTokenPDA,
-                    tokenSourceForSwapper: aTokenUser,
-                    tokenDestinationForSwapper: bTokenUser,
-                    poolFeeAccount: poolAccountForAdmin,
-                    hostFeeAccount: poolAccountForAdmin,
-                    pool: poolMintPubkey,
-                    pda: pda,
-                    tokenProgramSource: aTokenSource,
-                    tokenProgramDestination: bTokenSource,
-                    tokenProgram: TOKEN_PROGRAM_ID
-                })
-                .remainingAccounts(lpTokenUsers)
-                .instruction()
-
-            const addInstruction4 = await checkQuoteNativeForUser(
-                mintB,
-                config.swapper.publicKey
-            )
-            const instruction5 = await checkCompute()
-
-            const instructions = [
-                ...addInstruction1,
-                ...addInstruction2,
-                addInstruction3,
-                ...addInstruction4,
-                ...instruction5
-            ]
-            const message = new TransactionMessage({
-                payerKey: config.swapper.publicKey,
-                recentBlockhash: hash.blockhash,
-                instructions
-            }).compileToV0Message()
-
-            const transaction = new VersionedTransaction(message)
-
-            const signedTxn = await config.swapper.signTransaction(transaction)
-            const tx = await config.connection.sendTransaction(signedTxn, {
-                skipPreflight: true
-            })
-
-            let time = 0
-
-            console.log(tx)
-
-            const interval = setInterval(async () => {
-                // console.log(time, ' asking')
-                const transactionResult =
-                    await config.connection.getTransaction(tx, {
-                        commitment: 'confirmed',
-                        maxSupportedTransactionVersion: 1
-                    })
-                if (transactionResult) {
-                    console.log('done', time)
-                    resolve(tx)
-                    clearInterval(interval)
-                } else {
-                    if (time >= 15) {
-                        // console.log('error', time)
-                        clearInterval(interval)
-                        resolve(false)
-                    } else {
-                        // console.log('add one')
-                        time++
-                    }
-                }
-            }, 3000)
-
-            return tx
-        } catch (error) {
-            throw new Error(error)
+        if (amountOut <= 0) {
+            throw new Error(`amountOut is ${amountOut}`)
         }
-    })
+
+        const _avPercent = 100 - config.slippage
+        const _amount = (Number(amountOut) * _avPercent) / 100
+
+        const [sendAmount, receiveAmount] = await Promise.all([
+            changeToBN(amountIn, aMintPubkey, config),
+            changeToBN(_amount, bMintPubkey, config)
+        ])
+
+        const addInstruction3 = await program.methods
+            .swapExactIn(sendAmount, receiveAmount)
+            .accounts({
+                swapper: config.pubkey,
+                pair: swapPair,
+                tokenSource: mintA,
+                tokenDestination: mintB,
+                tokenSourceForPda: aTokenPDA,
+                tokenDestinationForPda: bTokenPDA,
+                tokenSourceForSwapper: aTokenUser,
+                tokenDestinationForSwapper: bTokenUser,
+                poolFeeAccount: poolAccountForAdmin,
+                hostFeeAccount: poolAccountForAdmin,
+                pool: poolMintPubkey,
+                pda: pda,
+                tokenProgramSource: aTokenSource,
+                tokenProgramDestination: bTokenSource,
+                tokenProgram: TOKEN_PROGRAM_ID
+            })
+            .remainingAccounts(lpTokenUsers)
+            .instruction()
+
+        const addInstruction4 = await checkQuoteNativeForUser(
+            mintB,
+            config.pubkey
+        )
+
+        const instructions = [
+            ...addInstruction1,
+            ...addInstruction2,
+            addInstruction3,
+            ...addInstruction4
+        ]
+        const message = new TransactionMessage({
+            payerKey: config.pubkey,
+            recentBlockhash: hash.blockhash,
+            instructions
+        }).compileToV0Message()
+
+        return message
+    } catch (error) {
+        // console.log(error)
+        throw new Error(error)
+    }
 }
 
 exports.getAmount = async (config, baseToken, quoteToken, amountIn) => {
     try {
-        const provider = new AnchorProvider(
-            config.connection,
-            config.swapper,
-            {}
-        )
+        const provider = new AnchorProvider(config.connection, {
+            publicKey: new PublicKey(config.RANDOM_WALLET_ADDRESS),
+          });
         const program = new Program(IDL, config.programId, provider)
 
         const { mintA, mintB, isBaseSmall } = getMintPubKey(
@@ -617,7 +495,7 @@ exports.getAmount = async (config, baseToken, quoteToken, amountIn) => {
 
         const aTokenData = await getTokenAddress(
             mintA,
-            config.swapper.publicKey,
+            config.pubkey,
             config
         )
 
