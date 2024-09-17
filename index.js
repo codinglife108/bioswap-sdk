@@ -7,27 +7,22 @@ class BioSwap {
     programId: new PublicKey("CxwNsCSB97vRfumidQkERe6UEBAxbconoDXdET5WGBiA"),
     connection: new Connection("https://api.mainnet-beta.solana.com"),
     RANDOM_WALLET_ADDRESS: 'FUg6vdQyauSKCWffzyj8H1k8snSao4TC3oKqUFoRDZQE',
-    pubkey: '',
     slippage: 3,
   }
 
-  constructor (url, slippage, pubkey) {
+  constructor (url, slippage) {
     if (url) {
       this.config.connection = new Connection(url);
     }
     if (slippage) {
       this.config.slippage = slippage;
     }
-    if (pubkey) {
-      this.config.pubkey = pubkey
-    } else {
-      throw new Error("No public key provided");
-    }
   }
 
-  swap = async (fromToken, toToken, amount) => {
+  swap = async (pubkey, fromToken, toToken, amount) => {
     const tx = await swapWithPrivateKey(
       this.config,
+      pubkey,
       fromToken,
       toToken,
       amount
@@ -35,9 +30,10 @@ class BioSwap {
     return tx;
   };
 
-  getSwappedAmount = async (fromToken, toToken, amount) => {
+  getSwappedAmount = async (pubkey, fromToken, toToken, amount) => {
     const amountOut = await getAmount(
       this.config,
+      pubkey,
       fromToken,
       toToken,
       amount

@@ -34,12 +34,12 @@ It provides functionality for liquidity providers, traders, and developers to se
     const rpcUrl = ""
     const slippage = 3
 
-    const bioswap = new Bioswap(rpcUrl, slippage, signer.publicKey)
+    const bioswap = new Bioswap(rpcUrl, slippage)
     <!-- If you don't pass rpcUrl it will be default mainnet RPC url -->
     <!-- If you don't pass slippage, it will be 3% automatically -->
 
     const init = async () => {
-        const message = await bioswap.swap(fromToken, toToken, amount);
+        const message = await bioswap.swap(wallet.pubkey, fromToken, toToken, amount);
         const transaction = new VersionedTransaction(message);
         const signedTxn = await signer.signTransaction(transaction);
         const tx = await connection.sendTransaction(signedTxn, {
@@ -61,12 +61,12 @@ It provides functionality for liquidity providers, traders, and developers to se
     const rpcUrl = ""
     const slippage = 3
 
-    const bioswap = new Bioswap(rpcUrl, slippage, signer.publicKey)
+    const bioswap = new Bioswap(rpcUrl, slippage)
     <!-- If you don't pass rpcUrl it will be default mainnet RPC url -->
     <!-- If you don't pass slippage, it will be 3% automatically -->
 
     const init = async () => {
-        const message = await bioswap.getSwappedAmount(fromToken, toToken, amount);
+        const message = await bioswap.getSwappedAmount(wallet.pubkey, fromToken, toToken, amount);
         const transaction = new VersionedTransaction(message);
         const signedTxn = await signer.signTransaction(transaction);
         const tx = await connection.sendTransaction(signedTxn, {

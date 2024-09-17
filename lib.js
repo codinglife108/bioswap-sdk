@@ -69,60 +69,58 @@ const getPairData = async (swapPair, program, config) => {
     }
 }
 
-const getTokenAddress = async (mint, config) => {
+const getTokenAddress = async (mint, config, pubkey) => {
     const is22 = await checkIsToken2022(mint, config)
     let tokenAccount
 
     if (is22) {
         tokenAccount = getAssociatedTokenAddressSync(
             mint,
-            config.pubkey,
+            pubkey,
             undefined,
             TOKEN_2022_PROGRAM_ID
         )
     } else {
         tokenAccount = getAssociatedTokenAddressSync(
             mint,
-            config.pubkey
+            pubkey
         )
     }
     const tokenSource = is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID
     return { tokenAccount, tokenSource, is22 }
 }
 
-const checkBaseNativeForUser = async (mint, config, amount) => {
+const checkBaseNativeForUser = async (mint, config, pubkey, amount) => {
     const instructions = []
 
     if (mint.toBase58() === NATIVE_MINT.toBase58()) {
         try {
             const tokenSourceForSwapper = getAssociatedTokenAddressSync(
                 NATIVE_MINT,
-                config.pubkey,
+                pubkey,
                 true
             )
-
             const accountInfo = await config.connection.getAccountInfo(
                 tokenSourceForSwapper
             )
-
             if (!accountInfo) {
                 const createWsolAccountIxn =
                     createAssociatedTokenAccountInstruction(
-                        config.pubkey,
+                        pubkey,
                         tokenSourceForSwapper,
-                        config.pubkey,
+                        pubkey,
                         NATIVE_MINT
                     )
                 instructions.push(createWsolAccountIxn)
                 const solTransIxn = SystemProgram.transfer({
-                    fromPubkey: config.pubkey,
+                    fromPubkey: pubkey,
                     toPubkey: tokenSourceForSwapper,
                     lamports: new BN(String(Number(amount) * 10 ** 9))
                 })
                 instructions.push(solTransIxn)
             } else {
                 const solTransIxn = SystemProgram.transfer({
-                    fromPubkey: config.pubkey,
+                    fromPubkey: pubkey,
                     toPubkey: tokenSourceForSwapper,
                     lamports: new BN(Number(amount) * 10 ** 9)
                 })
@@ -133,7 +131,6 @@ const checkBaseNativeForUser = async (mint, config, amount) => {
             )
             instructions.push(syncNativeInx)
         } catch (error) {
-            console.log(error)
             throw new Error("RPC Error when create wsol sync");   
         }
     }
@@ -149,7 +146,7 @@ const checkIsToken2022 = async (mint, config) => {
     }
 }
 
-const checkQuoteForUser = async (mint, config, tokenSourceForSwapper) => {
+const checkQuoteForUser = async (mint, config, pubkey, tokenSourceForSwapper) => {
     const instructions = []
     const sourceIs22 = await checkIsToken2022(mint, config)
 
@@ -162,18 +159,18 @@ const checkQuoteForUser = async (mint, config, tokenSourceForSwapper) => {
             if (sourceIs22) {
                 createAccountInstruction =
                     createAssociatedTokenAccountInstruction(
-                        config.pubkey,
+                        pubkey,
                         tokenSourceForSwapper,
-                        config.pubkey,
+                        pubkey,
                         mint,
                         TOKEN_2022_PROGRAM_ID
                     )
             } else {
                 createAccountInstruction =
                     createAssociatedTokenAccountInstruction(
-                        config.pubkey,
+                        pubkey,
                         tokenSourceForSwapper,
-                        config.pubkey,
+                        pubkey,
                         mint
                     )
             }
@@ -341,6 +338,7 @@ const getLpUsers = async (mint, poolTokenAccount) => {
 
 exports.swapWithPrivateKey = async (
     config,
+    pubkey,
     baseToken,
     quoteToken,
     amountIn
@@ -378,9 +376,9 @@ exports.swapWithPrivateKey = async (
             addInstruction1
         ] = await Promise.all([
             getPairData(swapPair, program, config),
-            getTokenAddress(mintA, config),
-            getTokenAddress(mintB, config),
-            checkBaseNativeForUser(mintA, config, amountIn)
+            getTokenAddress(mintA, config, pubkey),
+            getTokenAddress(mintB, config, pubkey),
+            checkBaseNativeForUser(mintA, config, pubkey, amountIn)
         ])
 
         const aTokenUser = aTokenData.tokenAccount
@@ -396,7 +394,7 @@ exports.swapWithPrivateKey = async (
 
         const [addInstruction2, amountOut, lpTokenUsers, hash] =
             await Promise.all([
-                checkQuoteForUser(mintB, config, bTokenUser),
+                checkQuoteForUser(mintB, config, pubkey, bTokenUser),
                 getQuote(
                     aTokenIs,
                     bTokenIs,
@@ -425,7 +423,7 @@ exports.swapWithPrivateKey = async (
         const addInstruction3 = await program.methods
             .swapExactIn(sendAmount, receiveAmount)
             .accounts({
-                swapper: config.pubkey,
+                swapper: pubkey,
                 pair: swapPair,
                 tokenSource: mintA,
                 tokenDestination: mintB,
@@ -446,7 +444,7 @@ exports.swapWithPrivateKey = async (
 
         const addInstruction4 = await checkQuoteNativeForUser(
             mintB,
-            config.pubkey
+            pubkey
         )
 
         const instructions = [
@@ -456,7 +454,7 @@ exports.swapWithPrivateKey = async (
             ...addInstruction4
         ]
         const message = new TransactionMessage({
-            payerKey: config.pubkey,
+            payerKey: pubkey,
             recentBlockhash: hash.blockhash,
             instructions
         }).compileToV0Message()
@@ -468,7 +466,7 @@ exports.swapWithPrivateKey = async (
     }
 }
 
-exports.getAmount = async (config, baseToken, quoteToken, amountIn) => {
+exports.getAmount = async (config, pubkey, baseToken, quoteToken, amountIn) => {
     try {
         const provider = new AnchorProvider(config.connection, {
             publicKey: new PublicKey(config.RANDOM_WALLET_ADDRESS),
@@ -495,7 +493,7 @@ exports.getAmount = async (config, baseToken, quoteToken, amountIn) => {
 
         const aTokenData = await getTokenAddress(
             mintA,
-            config.pubkey,
+            pubkey,
             config
         )
 
