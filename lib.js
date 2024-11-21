@@ -81,10 +81,7 @@ const getTokenAddress = async (mint, config, pubkey) => {
             TOKEN_2022_PROGRAM_ID
         )
     } else {
-        tokenAccount = getAssociatedTokenAddressSync(
-            mint,
-            pubkey
-        )
+        tokenAccount = getAssociatedTokenAddressSync(mint, pubkey)
     }
     const tokenSource = is22 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID
     return { tokenAccount, tokenSource, is22 }
@@ -92,7 +89,6 @@ const getTokenAddress = async (mint, config, pubkey) => {
 
 const checkBaseNativeForUser = async (mint, config, pubkey, amount) => {
     const instructions = []
-
     if (mint.toBase58() === NATIVE_MINT.toBase58()) {
         try {
             const tokenSourceForSwapper = getAssociatedTokenAddressSync(
@@ -131,7 +127,8 @@ const checkBaseNativeForUser = async (mint, config, pubkey, amount) => {
             )
             instructions.push(syncNativeInx)
         } catch (error) {
-            throw new Error("RPC Error when create wsol sync");   
+            console.log(error)
+            throw new Error('RPC Error when create wsol sync ', error)
         }
     }
     return instructions
@@ -146,7 +143,12 @@ const checkIsToken2022 = async (mint, config) => {
     }
 }
 
-const checkQuoteForUser = async (mint, config, pubkey, tokenSourceForSwapper) => {
+const checkQuoteForUser = async (
+    mint,
+    config,
+    pubkey,
+    tokenSourceForSwapper
+) => {
     const instructions = []
     const sourceIs22 = await checkIsToken2022(mint, config)
 
@@ -336,6 +338,19 @@ const getLpUsers = async (mint, poolTokenAccount) => {
     return allOwners
 }
 
+const checkCompute = async (fee) => {
+    const instructions = []
+    const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: fee
+    })
+    const computeLimitIx = ComputeBudgetProgram.setComputeUnitLimit({
+        units: 100000_000
+    })
+    instructions.push(computePriceIx)
+    instructions.push(computeLimitIx)
+    return instructions
+}
+
 exports.swapWithPrivateKey = async (
     config,
     pubkey,
@@ -345,8 +360,8 @@ exports.swapWithPrivateKey = async (
 ) => {
     try {
         const provider = new AnchorProvider(config.connection, {
-            publicKey: new PublicKey(config.RANDOM_WALLET_ADDRESS),
-          });
+            publicKey: new PublicKey(config.RANDOM_WALLET_ADDRESS)
+        })
         const program = new Program(IDL, config.programId, provider)
 
         const { mintA, mintB, isBaseSmall } = getMintPubKey(
@@ -393,6 +408,7 @@ exports.swapWithPrivateKey = async (
         const bTokenPDA = isBaseSmall ? tokenBAccount : tokenAAccount
 
         const [addInstruction2, amountOut, lpTokenUsers, hash] =
+        // const [addInstruction2, amountOut, hash] =
             await Promise.all([
                 checkQuoteForUser(mintB, config, pubkey, bTokenUser),
                 getQuote(
@@ -442,16 +458,18 @@ exports.swapWithPrivateKey = async (
             .remainingAccounts(lpTokenUsers)
             .instruction()
 
-        const addInstruction4 = await checkQuoteNativeForUser(
-            mintB,
-            pubkey
-        )
+        const addInstruction4 = await checkQuoteNativeForUser(mintB, pubkey)
+        // const addInstruction5 = await checkQuoteNativeForUser(mintA, pubkey)
+
+        const computeInstruction = await checkCompute(config.fee)
 
         const instructions = [
+            ...computeInstruction,
             ...addInstruction1,
             ...addInstruction2,
             addInstruction3,
-            ...addInstruction4
+            ...addInstruction4,
+            // ...addInstruction5
         ]
         const message = new TransactionMessage({
             payerKey: pubkey,
@@ -459,9 +477,9 @@ exports.swapWithPrivateKey = async (
             instructions
         }).compileToV0Message()
 
-        return message
+        return { instructions, message }
     } catch (error) {
-        // console.log(error)
+        console.log(error)
         throw new Error(error)
     }
 }
@@ -469,8 +487,8 @@ exports.swapWithPrivateKey = async (
 exports.getAmount = async (config, pubkey, baseToken, quoteToken, amountIn) => {
     try {
         const provider = new AnchorProvider(config.connection, {
-            publicKey: new PublicKey(config.RANDOM_WALLET_ADDRESS),
-          });
+            publicKey: new PublicKey(config.RANDOM_WALLET_ADDRESS)
+        })
         const program = new Program(IDL, config.programId, provider)
 
         const { mintA, mintB, isBaseSmall } = getMintPubKey(
@@ -491,11 +509,7 @@ exports.getAmount = async (config, pubkey, baseToken, quoteToken, amountIn) => {
             program
         )
 
-        const aTokenData = await getTokenAddress(
-            mintA,
-            pubkey,
-            config
-        )
+        const aTokenData = await getTokenAddress(mintA, pubkey, config)
 
         const aTokenIs = aTokenData.is22
         const bTokenIs = aTokenData.is22
